@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AURELIA - Forged in Light</title>
+<!--
+  Brief: premium futuristic ad, chrome materials, dramatic lighting, smooth cinematic camera.
+  Library mechanics (motionprompts.dev; usage level of each in CREDITS.md):
+    - webgl-interactive-gradient : iterative trig-feedback flow field mixed into a 4-colour ramp
+                                   → re-graded to liquid chrome, driven by timeline time (no mouse/rAF)
+    - guiding-light              : darkness layer with a radial mask "light pool" that follows a point
+                                   → point follows a scripted cinematic path instead of the cursor
+    - permianworld-landing-page-animation : masked line reveals (yPercent inside overflow:hidden lines)
+-->
+<style>
+  :root {
+    --bg: #050506;
+    --fg: #ece9e3;
+    --gold: #c9a96e;
+    --steel: #9aa1ab;
+    --font-display: "Inter Display", "Inter", sans-serif;
+    --font-text: "Inter", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); }
+  body { font-family: var(--font-text); -webkit-font-smoothing: antialiased; }
+  .stage { position: fixed; inset: 0; overflow: hidden; }
+  .layer { position: absolute; inset: 0; }
+  #gl canvas { display: block; width: 100%; height: 100%; }
+
+  /* camera rig: everything inside moves together for push-ins / drifts */
+  .rig { position: absolute; inset: 0; transform-origin: 50% 55%; }
+
+  /* product */
+  .product { position: absolute; left: 50%; top: 50%; height: 60vh; aspect-ratio: 580 / 1451; }
+  .product img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  /* specular sheen confined to the bottle silhouette via its own alpha */
+  .sheen { position: absolute; inset: 0;
+    -webkit-mask: url(assets/bottle-cut.png) center / contain no-repeat; mask: url(assets/bottle-cut.png) center / contain no-repeat;
+    background: linear-gradient(105deg, transparent 0%, transparent calc(var(--s) - 12%), rgba(255,255,255,.0) calc(var(--s) - 8%),
+      rgba(255,250,240,.75) var(--s), rgba(255,255,255,0) calc(var(--s) + 6%), transparent 100%);
+    mix-blend-mode: screen; }
+  .reflection { position: absolute; left: 0; right: 0; top: 100%; height: 100%; transform: scaleY(-1); opacity: .18;
+    -webkit-mask: linear-gradient(to top, rgba(0,0,0,.9), transparent 35%); mask: linear-gradient(to top, rgba(0,0,0,.9), transparent 35%); }
+  .reflection img { width: 100%; height: 100%; object-fit: contain; }
+  .halo { position: absolute; left: 50%; top: 50%; width: 70vmin; height: 90vmin; transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, rgba(2,2,3,.78), rgba(2,2,3,.35) 60%, transparent); }
+  .scrim { background: linear-gradient(90deg, rgba(2,2,3,.82) 0%, rgba(2,2,3,.45) 32%, transparent 55%); }
+  [data-orientation="portrait"] .scrim { background: linear-gradient(0deg, rgba(2,2,3,.85) 0%, rgba(2,2,3,.4) 35%, transparent 55%); }
+  .floor-glow { position: absolute; left: 50%; top: 86%; width: 60vmin; height: 8vmin; transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, rgba(255,240,215,.35), transparent); filter: blur(10px); }
+
+  /* guiding-light mechanic: darkness with a moving light pool */
+  .dark { background: #020203;
+    -webkit-mask: radial-gradient(circle var(--lr) at var(--lx) var(--ly), transparent 0%, transparent 35%, #000 85%);
+    mask: radial-gradient(circle var(--lr) at var(--lx) var(--ly), transparent 0%, transparent 35%, #000 85%); }
+  .beam { background: radial-gradient(circle var(--lr) at var(--lx) var(--ly), rgba(255,236,205,.16), transparent 70%); mix-blend-mode: screen; }
+
+  /* type */
+  .copy { position: absolute; left: 8vw; top: 50%; transform: translateY(-50%); }
+  .eyebrow { font-size: 1.5vmin; letter-spacing: .5em; text-transform: uppercase; color: var(--gold); margin-bottom: 2.2vmin; }
+  .headline { font-family: var(--font-display); font-weight: 300; font-size: 8.4vmin; line-height: .98; letter-spacing: -0.035em; }
+  .headline em { font-style: normal; font-weight: 600;
+    background: linear-gradient(100deg, #6d7480 0%, #f4f2ee 30%, #8b929c 48%, #ffffff 62%, #7d838d 100%);
+    background-size: 220% 100%; background-position: var(--chrome, 0%) 0; -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin-top: 2.6vmin; font-size: 1.7vmin; letter-spacing: .32em; text-transform: uppercase; color: var(--steel); }
+  .line { display: block; overflow: hidden; padding-bottom: .06em; }
+  .line > span { display: inline-block; }
+
+  .endcard::before { content: ""; position: absolute; inset: -30vh -10vw; z-index: -1;
+    background: radial-gradient(closest-side, rgba(2,2,3,.8), transparent); opacity: var(--veil, 0); }
+  .endcard { position: absolute; right: 8vw; top: 50%; width: 34vw; transform: translateY(-50%); text-align: center; }
+  .endcard img { width: 100%; height: auto; display: block; }
+  .endcard .rule { height: 1px; width: 100%; margin: 3vmin auto 2.4vmin; background: linear-gradient(90deg, transparent, var(--gold), transparent); transform-origin: 50% 50%; }
+  .endcard p { font-size: 1.5vmin; letter-spacing: .45em; text-transform: uppercase; color: var(--steel); }
+
+  .letterbox { position: absolute; left: 0; right: 0; height: 6vh; background: #000; z-index: 5; }
+  .letterbox.top { top: 0; } .letterbox.bottom { bottom: 0; }
+  .grain { opacity: .07; mix-blend-mode: overlay; background-size: 256px 256px; }
+
+  /* portrait / square re-composition */
+  [data-orientation="portrait"] .product { top: 40%; height: 46vh; }
+  [data-orientation="portrait"] .copy { left: 0; right: 0; top: auto; bottom: 14vh; transform: none; text-align: center; }
+  [data-orientation="portrait"] .headline { font-size: 9.5vmin; }
+  [data-orientation="portrait"] .endcard { right: auto; left: 50%; top: auto; bottom: 13vh; width: 72vw; transform: translateX(-50%); }
+  [data-orientation="portrait"] .floor-glow { top: 64%; }
+  [data-orientation="portrait"] .letterbox { height: 3vh; }
+  [data-orientation="square"] .copy { left: 6vw; }
+  [data-orientation="square"] .product { left: 64%; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="layer" id="gl"></div>
+    <div class="rig">
+      <div class="halo" id="halo"></div>
+      <div class="floor-glow"></div>
+      <div class="product" id="product">
+        <div class="reflection"><img src="assets/bottle-cut.png" alt="" /></div>
+        <img src="assets/bottle-cut.png" alt="AURELIA bottle" />
+        <div class="sheen" id="sheen"></div>
+      </div>
+    </div>
+    <div class="layer scrim" id="scrim"></div>
+    <div class="layer beam" id="beam"></div>
+    <div class="layer dark" id="dark"></div>
+    <div class="copy" id="copy">
+      <p class="eyebrow"><span class="line"><span>Aurelia · Eau de Parfum</span></span></p>
+      <h1 class="headline"><span class="line"><span>Forged</span></span><span class="line"><span>in <em>light.</em></span></span></h1>
+      <p class="sub"><span class="line"><span>A new fragrance</span></span></p>
+    </div>
+    <div class="endcard" id="endcard">
+      <div class="logo-wrap line"><span><img src="assets/logo.png" alt="AURELIA Paris" /></span></div>
+      <div class="rule"></div>
+      <p><span class="line"><span>Eau de Parfum</span></span></p>
+    </div>
+    <canvas class="layer grain" id="grain"></canvas>
+    <div class="letterbox top"></div><div class="letterbox bottom"></div>
+  </div>
+
+  <script src="mdd-runtime.js"></script>
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script src="vendor/gsap/CustomEase.min.js"></script>
+  <script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js" } }</script>
+  <script type="module">
+    import * as THREE from "three";
+    gsap.registerPlugin(CustomEase);
+
+    // Motion system: curtain-toggle tokens (mp_catalog.py systems curtain-toggle), slowed for luxury pacing
+    const T = { ease: "power3.out", ease2: "power4.out", io: "power4.inOut", exit: "power2.in", fast: 0.6, base: 1.1, slow: 2.0, stagger: 0.1 };
+    CustomEase.create("cine", "0.7, 0, 0.2, 1");
+    const DURATION = 10;
+    const portrait = MDD.orientation === "portrait";
+
+    /* ---------- liquid chrome backdrop (adapted-source: webgl-interactive-gradient display shader - see CREDITS.md) ---------- */
+    const host = document.getElementById("gl");
+    const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(innerWidth, innerHeight);
+    host.appendChild(renderer.domElement);
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const U = {
+      uTime: { value: 0 }, uRes: { value: new THREE.Vector2(innerWidth, innerHeight) },
+      uWarp: { value: 0 }, uExposure: { value: 0 }, uLight: { value: new THREE.Vector3(0.5, 0.5, 0.3) },
+    };
+    const material = new THREE.ShaderMaterial({
+      uniforms: U,
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`,
+      fragmentShader: `
+        precision highp float;
+        varying vec2 vUv;
+        uniform float uTime, uWarp, uExposure; uniform vec2 uRes; uniform vec3 uLight;
+        void main(){
+          vec2 frag = vUv * uRes;
+          float mr = min(uRes.x, uRes.y);
+          vec2 uv = (frag * 2.0 - uRes) / mr * 0.55;
+          // scripted "brush": a slow swirl standing in for the original mouse-driven fluid
+          float r = length(uv - vec2(0.3, -0.1));
+          uv += uWarp * 0.35 * vec2(sin(r * 3.0 - uTime), cos(r * 2.6 + uTime)) * exp(-r * 1.2);
+          // iterative trig feedback flow - adapted from motionprompts.dev webgl-interactive-gradient (PolyForm NC, attribution)
+          float d = -uTime * 0.35, a = 0.0;
+          for (float i = 0.0; i < 8.0; ++i) { a += cos(i - d - a * uv.x); d += sin(uv.y * i + a); }
+          d += uTime * 0.35;
+          float m1 = cos(uv.x * d) * 0.5 + 0.5;
+          float m2 = cos(uv.y * a) * 0.5 + 0.5;
+          float m3 = sin(d + a) * 0.5 + 0.5;
+          // chrome grade: graphite base, sharp silver ridges, faint gold in the troughs
+          float v = mix(m1, m2, 0.5);
+          float ridge = pow(1.0 - abs(2.0 * fract(v * 1.6 + m3 * 0.4) - 1.0), 6.0);
+          vec3 graphite = vec3(0.035, 0.038, 0.045);
+          vec3 steel = vec3(0.42, 0.45, 0.50);
+          vec3 silver = vec3(0.93, 0.94, 0.96);
+          vec3 gold = vec3(0.79, 0.66, 0.43);
+          vec3 col = mix(graphite, steel, smoothstep(0.35, 0.98, m2) * 0.4);
+          col = mix(col, gold * 0.55, smoothstep(0.6, 1.0, m3) * 0.35);
+          col += silver * ridge * 0.7;
+          // light pool from the spotlight brightens the metal (dramatic key light)
+          vec2 p = vUv; p.x *= uRes.x / uRes.y; vec2 L = uLight.xy; L.x *= uRes.x / uRes.y;
+          float key = exp(-pow(length(p - L) / max(uLight.z, 0.001), 2.0));
+          col *= 0.16 + 1.0 * key;
+          // vignette
+          vec2 q = vUv - 0.5; col *= 1.0 - dot(q, q) * 1.6;
+          gl_FragColor = vec4(col * uExposure, 1.0);
+        }`,
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    const scene = new THREE.Scene(); scene.add(quad);
+
+    /* ---------- seeded film grain (static set of 6 tiles, cycled by frame) ---------- */
+    const grain = document.getElementById("grain");
+    grain.width = 256; grain.height = 256;
+    const gctx = grain.getContext("2d");
+    const rnd = MDD.random(7);
+    const tiles = Array.from({ length: 6 }, () => {
+      const img = gctx.createImageData(256, 256);
+      for (let i = 0; i < img.data.length; i += 4) { const v = rnd() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+      return img;
+    });
+
+    /* ---------- proxies animated on the master timeline ---------- */
+    const light = { x: -0.15, y: 0.42, r: 0, glow: 0 };   // spotlight in 0..1 screen space, r in vmin
+    const env = { time: 0, warp: 0, exposure: 0, sheen: -20, chrome: 0 };
+    const darkEl = document.getElementById("dark"), beamEl = document.getElementById("beam");
+    const sheenEl = document.getElementById("sheen"), headline = document.querySelector(".headline em");
+
+    gsap.set(["#product", "#halo"], { xPercent: -50, yPercent: -50 });
+    gsap.set("#scrim", { opacity: 0 });
+    const tl = gsap.timeline({ paused: true, defaults: { ease: T.ease } });
+    const cx = portrait ? 0.5 : 0.5, cy = portrait ? 0.4 : 0.52;
+
+    // continuous: chrome flow time + slow camera push (keeps every frame alive)
+    tl.to(env, { time: 6.5, duration: DURATION, ease: "none" }, 0)
+      .fromTo(".rig", { scale: 1.12 }, { scale: 1.0, duration: 6.0, ease: "cine" }, 0)
+      .to(".rig", { scale: 1.035, duration: DURATION - 6.0, ease: "none" }, 6.0);
+
+    // OPEN 0-1.8: void → the light finds the metal
+    tl.addLabel("open", 0)
+      .to(env, { exposure: 1, duration: T.slow, ease: "power2.inOut" }, 0.2)
+      .to(light, { r: 34, duration: 1.6, ease: T.ease2 }, 0.2)
+      .to(light, { x: cx - 0.06, y: cy - 0.02, duration: 2.6, ease: "cine" }, 0.2)
+      .to(env, { warp: 1, duration: 3.0, ease: "power2.inOut" }, 0.4);
+
+    // REVEAL 1.4-4: product rises inside the light pool, sheen sweep #1
+    tl.addLabel("reveal", 1.4)
+      .fromTo("#product", { y: "5vh", opacity: 0, filter: "brightness(0.2)" },
+                          { y: 0, opacity: 1, filter: "brightness(1)", duration: 2.2, ease: T.ease2 }, "reveal")
+      .to(light, { x: cx, y: cy, r: 52, duration: 1.8, ease: "cine" }, "reveal+=1.0")
+      .fromTo(env, { sheen: -20 }, { sheen: 120, duration: 1.6, ease: "power2.inOut" }, "reveal+=1.6");
+
+    // HERO 3.6-6.6: the darkness opens, product to the right, headline in
+    tl.addLabel("hero", 3.6)
+      .to(light, { r: 140, glow: 1, duration: 2.4, ease: T.io }, "hero")
+      .to(["#product", "#halo"], { x: portrait ? 0 : "12vw", duration: 2.0, ease: T.io }, "hero")
+      .to(env, { exposure: 0.8, duration: 2.0, ease: "power1.inOut" }, "hero")
+      .to("#scrim", { opacity: 1, duration: 1.6, ease: "power1.inOut" }, "hero+=0.3")
+      .fromTo("#copy .line > span", { yPercent: 115 }, { yPercent: 0, duration: T.base, stagger: T.stagger, ease: T.io }, "hero+=0.6")
+      .fromTo(env, { chrome: 0 }, { chrome: 100, duration: 2.6, ease: "power1.inOut" }, "hero+=1.2");
+
+    // DETAIL 6.6-7.8: second specular pass, copy exits
+    tl.addLabel("detail", 6.4)
+      .fromTo(env, { sheen: -20 }, { sheen: 120, duration: 1.4, ease: "power2.inOut", immediateRender: false }, "detail")
+      .to("#copy .line > span", { yPercent: -115, duration: T.fast, stagger: 0.05, ease: T.exit }, "detail+=0.6");
+
+    // END 7.6-10: packshot + logo lockup, hold
+    tl.addLabel("end", 7.5)
+      .to(["#product", "#halo"], { x: portrait ? 0 : "-17vw", scale: portrait ? 0.92 : 0.95, duration: 1.6, ease: T.io }, "end")
+      .to("#scrim", { opacity: 0, duration: 1.0 }, "end")
+      .fromTo("#endcard", { "--veil": 0 }, { "--veil": 1, duration: 1.0, ease: "power1.inOut" }, "end+=0.2")
+      .to(light, { x: portrait ? 0.5 : 0.33, y: cy, r: 110, duration: 1.6, ease: T.io }, "end")
+      .fromTo("#endcard .logo-wrap > span", { yPercent: 105 }, { yPercent: 0, duration: 1.2, ease: T.io }, "end+=0.5")
+      .fromTo("#endcard .rule", { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: T.io }, "end+=0.8")
+      .fromTo("#endcard p .line > span", { yPercent: 115 }, { yPercent: 0, duration: 0.9, ease: T.ease }, "end+=1.1")
+      .set({}, {}, DURATION);
+
+    const vmin = Math.min(innerWidth, innerHeight) / 100;
+    MDD.register({
+      duration: DURATION, fps: 30, timeline: tl,
+      onFrame(t) {
+        const lx = light.x * innerWidth + "px", ly = light.y * innerHeight + "px", lr = light.r * vmin + "px";
+        for (const el of [darkEl, beamEl]) { el.style.setProperty("--lx", lx); el.style.setProperty("--ly", ly); el.style.setProperty("--lr", lr); }
+        beamEl.style.opacity = 1 - light.glow * 0.6;
+        sheenEl.style.setProperty("--s", env.sheen + "%");
+        headline.style.setProperty("--chrome", env.chrome + "%");
+        U.uTime.value = env.time; U.uWarp.value = env.warp; U.uExposure.value = env.exposure;
+        U.uLight.value.set(light.x, 1 - light.y, (light.r * vmin * 1.6) / innerHeight);
+        renderer.render(scene, camera);
+        gctx.putImageData(tiles[Math.floor(t * 24) % tiles.length], 0, 0);
+      },
+    });
+  </script>
+</body>
+</html>

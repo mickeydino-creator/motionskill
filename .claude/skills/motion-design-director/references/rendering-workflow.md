@@ -80,4 +80,9 @@ What the renderer verifies automatically, with a non-zero exit code if any check
 - No Playwright or Chromium: `npm i -D playwright` in the project (needs Chromium). There is no ffmpeg:
   install it with the system package manager. If neither can be installed, report the blocker, and deliver
   the working `index.html` plus stills if possible. Never deliver a fake MP4.
+- Something gets dimmed or covered unexpectedly: any element with `transform`, `filter` or `opacity` below 1 creates a
+  stacking context, so a `::before` with `z-index:-1` inside it can still cover earlier siblings. Fade such
+  backings in only during their beat. This is exactly the kind of bug the 9:16 QA pass catches.
+- A long render dies with "Target page, context or browser has been closed": the process was killed, often because a background job was
+  stopped. Run the final render in the foreground (Bash timeout up to 10 min), or split it with `--start`/`--end`.
 - Remotion is not required. Use it only if the user's project already runs Remotion.
