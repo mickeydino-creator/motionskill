@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Install the motion-design-director skill as a personal Claude Code skill (~/.claude/skills),
+# Manual alternative to the plugin marketplace: install the skill as a personal Claude Code skill
+# (~/.claude/skills),
 # so it is available in every project. Use --link to symlink instead of copying (keeps it in sync
 # with this repo). Re-running updates the installed copy.
 set -euo pipefail
-SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.claude/skills/motion-design-director"
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/plugins/motion-design-director"
 DEST="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}/motion-design-director"
 mkdir -p "$(dirname "$DEST")"
 if [[ -e "$DEST" || -L "$DEST" ]]; then

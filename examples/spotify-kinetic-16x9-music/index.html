@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spotify - kinetic spec ad 16:9 (portfolio)</title>
+<!--
+  Portfolio / noncommercial spec ad, 15 s @ 120 BPM, cut to assets/music.wav (original synthesised bed:
+  drop 5.0 s, snare roll 11-12 s, impact 12.0 s). Logo = user-supplied PNG, background removed, not redrawn.
+  Library mechanics (motionprompts.dev - usage per component in CREDITS.md):
+    - phive-text-scroll-animation  : colour bands whose giant word scaleY-stretches to fill the band
+    - stacked-alternating-marquees : dense rows in alternating directions
+-->
+<style>
+  :root { --green: #1ed760; --black: #0a0a0a; --white: #f5f5f0; --font: "Inter", sans-serif; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--black); }
+  body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--black); }
+  .layer { position: absolute; inset: 0; }
+
+  .band { display: grid; place-items: center; overflow: hidden; }
+  .band h1 { font-weight: 900; letter-spacing: -0.045em; line-height: .8; white-space: nowrap; transform: scaleY(0); padding-top: .06em; }
+  .b-green { background: var(--green); color: var(--black); }
+  .b-black { background: var(--black); color: var(--white); }
+  .b-white { background: var(--white); color: var(--black); }
+  .b-black.accent { color: var(--green); }
+
+  .marquees { display: flex; flex-direction: column; justify-content: center; gap: 1.6vh; transform: rotate(-7deg) scale(1.2); }
+  .row { display: flex; white-space: nowrap; }
+  .row span { font-weight: 900; font-size: 12.5vh; letter-spacing: -0.03em; line-height: 1; text-transform: uppercase; padding: 0 2.6vh; display: inline-flex; align-items: center; gap: 5.2vh; }
+  .row span::after { content: ""; width: 3.6vh; height: 3.6vh; border-radius: 50%; background: var(--green); }
+  .row.solid span { color: var(--white); }
+  .row.outline span { color: transparent; -webkit-text-stroke: 2px rgba(245,245,240,.5); }
+  .row.green span { color: var(--green); }
+  .row.green span::after { background: var(--white); }
+
+  .logo-wrap { position: absolute; left: 50%; top: 50%; width: 34vh; height: 34vh; transform: translate(-50%, -50%); }
+  .logo-wrap img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3vh 6vh rgba(0,0,0,.55)); }
+  .glow { position: absolute; left: 50%; top: 50%; width: 110vh; height: 110vh; transform: translate(-50%, -50%);
+          background: radial-gradient(closest-side, rgba(30,215,96,.42), rgba(30,215,96,.1) 45%, transparent 70%); }
+  .disc { position: absolute; left: 50%; top: 50%; width: 34vh; height: 34vh; border-radius: 50%; transform: translate(-50%,-50%);
+          border: .5vh solid var(--green); }
+
+  .flash { display: grid; place-items: center; }
+  .flash h2 { font-weight: 900; font-size: 52vh; letter-spacing: -0.05em; line-height: 1; text-transform: uppercase; }
+
+  .end-type { position: absolute; left: 50%; top: 50%; transform: translateY(-50%); color: var(--white); }
+  .end-type .name { font-weight: 800; font-size: 15vh; letter-spacing: -0.045em; line-height: .95; }
+  .end-type .cta { display: inline-block; margin-top: 3.6vh; padding: 1.6vh 4.4vh; border-radius: 99px; background: var(--green);
+                   color: var(--black); font-weight: 700; font-size: 2.8vh; }
+  .mask { display: block; overflow: hidden; padding-bottom: .05em; } .mask > * { display: inline-block; }
+
+  .eq { position: absolute; display: flex; gap: 1.2vh; align-items: flex-end; height: 6vh; left: 50%; bottom: 9vh; transform: translateX(-50%); }
+  .eq i { width: 1.3vh; height: 100%; background: var(--green); border-radius: 1vh; transform-origin: 50% 100%; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="layer" id="bands"></div>
+    <div class="layer" id="marq">
+      <div class="marquees layer">
+        <div class="row solid" data-dir="-1"></div><div class="row outline" data-dir="1"></div>
+        <div class="row green" data-dir="-1"></div><div class="row outline" data-dir="1"></div>
+        <div class="row solid" data-dir="-1"></div><div class="row outline" data-dir="1"></div>
+      </div>
+    </div>
+    <div class="layer" id="flashes"></div>
+    <div class="layer" id="hero">
+      <div class="glow" id="glow"></div>
+      <div class="disc" id="disc1"></div><div class="disc" id="disc2"></div>
+      <div class="logo-wrap" id="logo"><img src="assets/logo-cut@3x.png" alt="Spotify logo" /></div>
+    </div>
+    <div class="end-type" id="endType">
+      <div class="mask"><span class="name">Spotify</span></div>
+      <div class="mask"><span class="cta">Listen now</span></div>
+    </div>
+    <div class="eq" id="eq"></div>
+    <div class="layer" id="white" style="background:var(--white);opacity:0"></div>
+  </div>
+
+  <script src="mdd-runtime.js"></script>
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script>
+    const DURATION = 15, BEAT = 0.5, b = (n) => n * BEAT;   // music: 120 BPM, drop b(10), impact b(24)
+    const T = { snap: "power4.out", in: "power3.in", io: "power4.inOut" };   // step-advance tokens
+    const rnd = MDD.random(21);
+
+    /* ---------- 0-5 s: stretch bands (mechanic: phive-text-scroll-animation - adapted) ---------- */
+    const WORDS = [["PRESS", "b-green"], ["PLAY", "b-black accent"], ["ON", "b-white"], ["EVERY", "b-green"], ["MOOD", "b-black"]];
+    const bandsEl = document.getElementById("bands");
+    const bands = WORDS.map(([w, cls]) => {
+      const el = document.createElement("div");
+      el.className = "band layer " + cls; el.innerHTML = `<h1>${w}</h1>`; bandsEl.appendChild(el);
+      const h1 = el.querySelector("h1");
+      h1.style.fontSize = "100px";
+      h1.style.fontSize = Math.min(100 * innerWidth * 0.9 / h1.scrollWidth, innerHeight * 0.9) + "px";
+      return { el, h1, target: (innerHeight * 0.92) / h1.offsetHeight };
+    });
+
+    /* ---------- marquee rows ---------- */
+    const GENRES = ["Pop", "Hip-Hop", "Indie", "Jazz", "Podcasts", "Lo-fi", "Rock", "Latin", "Workout", "Focus", "Chill", "K-Pop", "Techno", "Soul"];
+    const rows = [...document.querySelectorAll(".row")].map((row, i) => {
+      const k = (i * 3) % GENRES.length, list = GENRES.slice(k).concat(GENRES.slice(0, k));
+      row.innerHTML = list.concat(list).map((g) => `<span>${g}</span>`).join("");
+      return { row, dir: +row.dataset.dir, speed: 0.8 + rnd() * 0.4 };
+    });
+
+    /* ---------- beat flashes 9.5-11.5 s ---------- */
+    const FLASH = [["POP", "b-green"], ["JAZZ", "b-black accent"], ["INDIE", "b-white"], ["LO-FI", "b-green"]];
+    const flashEl = document.getElementById("flashes");
+    const flashes = FLASH.map(([w, cls]) => {
+      const el = document.createElement("div");
+      el.className = "flash layer " + cls; el.innerHTML = `<h2>${w}</h2>`; el.style.visibility = "hidden"; flashEl.appendChild(el);
+      return el;
+    });
+
+    const eq = document.getElementById("eq");
+    const bars = Array.from({ length: 7 }, () => { const i = document.createElement("i"); eq.appendChild(i); return i; });
+    const eqPhase = bars.map(() => rnd() * Math.PI * 2);
+
+    gsap.set(["#marq", "#hero", "#eq"], { autoAlpha: 0 });
+    gsap.set(".end-type .mask > *", { yPercent: 110 });
+    gsap.set("#endType", { autoAlpha: 0 });
+
+    const tl = gsap.timeline({ paused: true });
+
+    // INTRO: each band rises on its beat, word stretches to fill, collapses into the next
+    bands.forEach(({ el, h1, target }, i) => {
+      const t0 = b(i * 2);
+      tl.fromTo(el, { yPercent: i ? 100 : 0 }, { yPercent: 0, duration: i ? 0.36 : 0.01, ease: T.snap }, t0)
+        .fromTo(h1, { scaleY: 0 }, { scaleY: target, duration: 0.42, ease: T.snap }, t0 + 0.02)
+        .to(h1, { scaleY: target * 0.04, duration: 0.32, ease: T.in }, t0 + b(2) - 0.1);
+      tl.set(el, { autoAlpha: 0 }, i === WORDS.length - 1 ? b(10) : t0 + b(2) + 0.36);
+    });
+    // riser (3-5 s): last word squeezes harder before the drop
+    tl.to(bands[4].el, { scale: 0.92, duration: 0.9, ease: "power2.in" }, 4.1);
+
+    // DROP 5.0: logo slams in, shock rings, marquees blast
+    tl.addLabel("drop", b(10))
+      .set(["#marq", "#hero"], { autoAlpha: 1 }, "drop")
+      .fromTo("#logo", { scale: 2.6, rotate: -30 }, { scale: 1, rotate: 0, duration: 0.55, ease: T.snap }, "drop")
+      .fromTo("#glow", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.7, ease: T.snap }, "drop")
+      .fromTo("#disc1", { scale: 1, opacity: 1 }, { scale: 3.2, opacity: 0, duration: 0.9, ease: "power2.out" }, "drop")
+      .fromTo("#disc2", { scale: 1, opacity: 1 }, { scale: 4.6, opacity: 0, duration: 1.2, ease: "power2.out" }, "drop+=0.12");
+    rows.forEach(({ row, dir, speed }, i) => {
+      const w = row.scrollWidth / 2;
+      tl.fromTo(row, { x: dir < 0 ? -w * 0.05 : -w * 0.55 }, { x: (dir < 0 ? -w * 0.5 : -w * 0.1) * speed, duration: 4.6, ease: "none" }, "drop")
+        .fromTo(row, { yPercent: 180 * (i % 2 ? -1 : 1), autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.45, ease: T.snap }, "drop+=" + i * 0.035);
+    });
+    // logo pulses on every beat of the groove; a ring every bar
+    for (let bi = 11; bi < 19; bi++) {
+      tl.fromTo("#logo", { scale: 1.07 }, { scale: 1, duration: 0.42, ease: "power2.out", immediateRender: false }, b(bi));
+      if (bi % 4 === 0) tl.fromTo("#disc1", { scale: 1, opacity: 0.8 }, { scale: 2.6, opacity: 0, duration: 0.8, ease: "power2.out", immediateRender: false }, b(bi));
+    }
+
+    // FLASHES 9.5-11.5: one genre per beat on hard cuts
+    tl.set(["#marq", "#hero"], { autoAlpha: 0 }, b(19));
+    flashes.forEach((el, i) => {
+      const t = b(19 + i);
+      tl.set(el, { visibility: "visible" }, t)
+        .fromTo(el.querySelector("h2"), { scale: 1.25, yPercent: 8 }, { scale: 1, yPercent: 0, duration: 0.4, ease: T.snap }, t)
+        .set(el, { visibility: "hidden" }, t + BEAT);
+    });
+    // ROLL 11.5-12: last band squeezes to a line while white builds
+    tl.set(flashes[3], { visibility: "visible" }, b(23))
+      .to(flashes[3].querySelector("h2"), { scaleY: 0.03, scaleX: 1.6, duration: 0.5, ease: "power3.in" }, b(23))
+      .to("#white", { opacity: 1, duration: 0.5, ease: "power3.in" }, b(23))
+      .set(flashes[3], { visibility: "hidden" }, b(24));
+
+    // IMPACT 12.0: white pops to black, end card
+    tl.addLabel("end", b(24))
+      .to("#white", { opacity: 0, duration: 0.5, ease: "power2.out" }, "end")
+      .set(["#hero", "#endType"], { autoAlpha: 1 }, "end")
+      .set("#marq", { autoAlpha: 0.12 }, "end")
+      .set("#logo", { scale: 1, rotate: 0 }, "end")
+      .fromTo("#hero", { x: 0 }, { x: "-16vw", duration: 0.7, ease: T.io }, "end+=0.25")
+      .fromTo("#disc2", { scale: 1, opacity: 1 }, { scale: 5, opacity: 0, duration: 1.4, ease: "power2.out", immediateRender: false }, "end")
+      .fromTo("#endType", { x: "-1.5vw" }, { x: "-2.5vw", duration: 3, ease: "none" }, "end")
+      .to(".end-type .mask > *", { yPercent: 0, duration: 0.6, stagger: 0.14, ease: T.snap }, "end+=0.85")
+      .to("#eq", { autoAlpha: 1, duration: 0.3 }, "end+=0.8")
+      .to(".marquees", { x: "-6vw", duration: 3, ease: "none" }, "end")
+      .to(["#eq", "#marq"], { autoAlpha: 0, duration: 0.6 }, DURATION - 0.7)
+      .set({}, {}, DURATION);
+
+    MDD.register({
+      duration: DURATION, fps: 30, timeline: tl,
+      onFrame(t) {
+        const kick = Math.exp(-((t % BEAT) / BEAT) * 5) * (t < 12 ? 1 : 0.5);
+        bars.forEach((bar, i) => {
+          const h = 0.2 + 0.45 * kick * (0.6 + 0.4 * Math.sin(i * 1.7)) + 0.3 * (0.5 + 0.5 * Math.sin(t * 9 + eqPhase[i]));
+          bar.style.transform = `scaleY(${Math.min(1, h).toFixed(3)})`;
+        });
+      },
+    });
+  </script>
+</body>
+</html>

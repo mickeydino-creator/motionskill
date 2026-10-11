@@ -149,6 +149,8 @@ def main():
     dur = a.duration
     drop = a.drop if a.drop is not None else round(dur / 3 / bar) * bar
     imp = a.impact if a.impact is not None else round(dur * 0.8 / bar) * bar
+    imp = min(imp, max(beat * 2, dur - beat * 2))   # leave room for the impact tail
+    drop = min(drop, max(0.0, imp - beat * 2))
     L = np.zeros(int((dur + 0.05) * SR))
     R = np.zeros_like(L)
     mono = np.zeros_like(L)

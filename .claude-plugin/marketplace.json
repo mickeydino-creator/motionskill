@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "motionskill",
+  "owner": {
+    "name": "mickeydino-creator",
+    "url": "https://github.com/mickeydino-creator"
+  },
+  "metadata": {
+    "description": "Motion Design Director: product images + a style brief -> rendered, verified motion-graphics ad (MP4)."
+  },
+  "plugins": [
+    {
+      "name": "motion-design-director",
+      "source": "./plugins/motion-design-director",
+      "description": "Art-directed motion-graphics videos from your images, using the motionprompts.dev library, GSAP/Three.js, Playwright and FFmpeg.",
+      "version": "1.0.0",
+      "category": "design",
+      "keywords": ["motion-design", "video", "animation", "advertising"]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+ "library": "https://motionprompts.dev",
+ "license": "motionprompts components/prompts are PolyForm Noncommercial 1.0.0 + mandatory attribution. Commercial use needs a separate license from motionprompts.dev.",
+ "used": [
+  {
+   "slug": "phive-text-scroll-animation",
+   "title": "Phive Text Scroll Animation",
+   "page": "https://motionprompts.dev/component/phive-text-scroll-animation/",
+   "prompt": "https://motionprompts.dev/prompts/phive-text-scroll-animation.md",
+   "how_used": "full-viewport colour bands whose word scaleY-stretches to fill the band then collapses; ScrollTrigger scrub replaced by beat-locked timeline tweens; original code",
+   "usage": "mechanic-reference"
+  },
+  {
+   "slug": "stacked-alternating-marquees",
+   "title": "Stacked Alternating Marquees",
+   "page": "https://motionprompts.dev/component/stacked-alternating-marquees/",
+   "prompt": "https://motionprompts.dev/prompts/stacked-alternating-marquees.md",
+   "how_used": "dense marquee rows in alternating directions with dot separators; scroll velocity replaced by linear timeline tweens; original code",
+   "usage": "mechanic-reference"
+  }
+ ]
+}

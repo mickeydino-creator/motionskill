@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spotify - kinetic spec ad (portfolio)</title>
+<!--
+  Portfolio / noncommercial spec ad. Logo = user-supplied image, used unaltered.
+  Library mechanics (motionprompts.dev - usage level per component in CREDITS.md):
+    - phive-text-scroll-animation : full-viewport colour bands whose giant word scaleY-stretches
+                                    to fill the band, then collapses as the next band arrives
+                                    (ScrollTrigger scrub -> master timeline, on a 120 BPM grid)
+    - stacked-alternating-marquees: dense marquee rows running in alternating directions
+                                    (scroll velocity -> linear timeline tweens)
+-->
+<style>
+  :root {
+    --green: #23d061;   /* sampled from the supplied logo */
+    --black: #0a0a0a;
+    --white: #f5f5f0;
+    --font: "Inter", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--black); }
+  body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  .stage { position: fixed; inset: 0; overflow: hidden; background: var(--black); }
+  .layer { position: absolute; inset: 0; }
+
+  /* phive mechanic: band + stretched word */
+  .band { display: grid; place-items: center; overflow: hidden; will-change: transform; }
+  .band h1 { font-weight: 900; letter-spacing: -0.04em; line-height: .8; white-space: nowrap;
+             transform-origin: 50% 50%; transform: scaleY(0); will-change: transform; padding-top: .06em; }
+  .b-green { background: var(--green); color: var(--black); }
+  .b-black { background: var(--black); color: var(--white); }
+  .b-white { background: var(--white); color: var(--black); }
+  .b-black.accent { color: var(--green); }
+
+  /* marquees */
+  .marquees { display: flex; flex-direction: column; justify-content: center; gap: 1.2vh; transform: rotate(-8deg) scale(1.25); }
+  .row { display: flex; white-space: nowrap; will-change: transform; }
+  .row span { font-weight: 900; font-size: 9vh; letter-spacing: -0.03em; line-height: 1; text-transform: uppercase; padding: 0 2.2vh; display: inline-flex; align-items: center; gap: 4.4vh; }
+  .row span::after { content: ""; width: 3.2vh; height: 3.2vh; border-radius: 50%; background: var(--green); display: inline-block; }
+  .row.solid span { color: var(--white); }
+  .row.outline span { color: transparent; -webkit-text-stroke: 2px rgba(245,245,240,.55); }
+  .row.green span { color: var(--green); }
+  .row.green span::after { background: var(--white); }
+
+  /* logo card */
+  .card-wrap { display: grid; place-items: center; }
+  .card { width: 78vw; aspect-ratio: 902 / 601; border-radius: 4.5vw; overflow: hidden; background: #000;
+          box-shadow: 0 4vh 10vh rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); will-change: transform; }
+  .card img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .glow { position: absolute; left: 50%; top: 50%; width: 120vw; height: 120vw; transform: translate(-50%,-50%);
+          background: radial-gradient(closest-side, rgba(35,208,97,.45), rgba(35,208,97,.12) 45%, transparent 70%); }
+
+  .end-type { position: absolute; left: 0; right: 0; bottom: 17vh; text-align: center; color: var(--white); }
+  .end-type .name { font-weight: 800; font-size: 7.4vh; letter-spacing: -0.035em; line-height: 1; }
+  .end-type .cta { display: inline-block; margin-top: 2.6vh; padding: 1.3vh 3.6vh; border-radius: 99px; background: var(--green);
+                   color: var(--black); font-weight: 700; font-size: 2.2vh; letter-spacing: .02em; }
+  .mask { display: block; overflow: hidden; } .mask > * { display: inline-block; }
+
+  /* equalizer under the card */
+  .eq { position: absolute; left: 50%; top: 88vh; transform: translateX(-50%); display: flex; gap: 1.1vh; align-items: flex-end; height: 5vh; }
+  .eq i { width: 1.1vh; height: 100%; background: var(--green); border-radius: 1vh; transform-origin: 50% 100%; }
+
+  /* landscape / square re-composition */
+  [data-orientation="landscape"] .card { width: 44vw; }
+  [data-orientation="landscape"] .end-type { bottom: 9vh; }
+  [data-orientation="landscape"] .eq { top: 92vh; height: 4vh; }
+  [data-orientation="landscape"] .row span { font-size: 13vh; }
+  [data-orientation="square"] .card { width: 62vw; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="layer" id="bands"></div>
+    <div class="layer" id="marq">
+      <div class="marquees layer">
+        <div class="row solid"  data-dir="-1"></div>
+        <div class="row outline" data-dir="1"></div>
+        <div class="row green" data-dir="-1"></div>
+        <div class="row outline" data-dir="1"></div>
+        <div class="row solid" data-dir="-1"></div>
+        <div class="row outline" data-dir="1"></div>
+        <div class="row green" data-dir="-1"></div>
+      </div>
+    </div>
+    <div class="layer card-wrap" id="cardWrap">
+      <div class="glow" id="glow"></div>
+      <div class="card" id="card"><img src="assets/logo-src.webp" alt="Spotify logo" /></div>
+    </div>
+    <div class="eq" id="eq"></div>
+    <div class="end-type">
+      <div class="mask"><span class="name">Spotify</span></div>
+      <div class="mask"><span class="cta">Listen now</span></div>
+    </div>
+  </div>
+
+  <script src="mdd-runtime.js"></script>
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script>
+    const DURATION = 10, BEAT = 0.5;                 // 120 BPM grid: every hit lands on a beat
+    const b = (n) => n * BEAT;
+    // step-advance tokens (mp_catalog.py systems step-advance): hop-like snap + power4.out
+    const T = { snap: "power4.out", in: "power3.in", io: "power4.inOut" };
+    const portrait = MDD.orientation === "portrait";
+
+    /* ---------- bands (mechanic: phive-text-scroll-animation - adapted) ---------- */
+    const WORDS = [
+      ["PRESS", "b-green"], ["PLAY", "b-black accent"], ["ON", "b-white"], ["EVERY", "b-green"], ["MOOD", "b-black"],
+    ];
+    const bandsEl = document.getElementById("bands");
+    const bands = WORDS.map(([w, cls]) => {
+      const el = document.createElement("div");
+      el.className = "band layer " + cls;
+      el.innerHTML = `<h1>${w}</h1>`;
+      bandsEl.appendChild(el);
+      return el;
+    });
+    // fit each word to ~92% width, then compute the scaleY that fills the band height
+    const fit = bands.map((band) => {
+      const h1 = band.querySelector("h1");
+      h1.style.fontSize = "100px";
+      const r = h1.getBoundingClientRect();           // scaleY(0) keeps width intact
+      const fs = 100 * (innerWidth * 0.92) / h1.scrollWidth;
+      h1.style.fontSize = fs + "px";
+      return { h1, target: (innerHeight * 0.94) / h1.offsetHeight };
+    });
+
+    /* ---------- marquee rows ---------- */
+    const GENRES = ["Pop", "Hip-Hop", "Indie", "Jazz", "Podcasts", "Lo-fi", "Rock", "Latin", "Workout", "Focus", "Chill", "K-Pop", "Techno", "Soul"];
+    const rnd = MDD.random(11);
+    const rows = [...document.querySelectorAll(".row")].map((row, i) => {
+      const list = GENRES.slice(i % GENRES.length).concat(GENRES.slice(0, i % GENRES.length));
+      row.innerHTML = list.concat(list).map((g) => `<span>${g}</span>`).join("");
+      return { row, dir: +row.dataset.dir, speed: 0.75 + rnd() * 0.5 };
+    });
+
+    /* ---------- equalizer bars ---------- */
+    const eq = document.getElementById("eq");
+    const bars = Array.from({ length: 5 }, () => { const i = document.createElement("i"); eq.appendChild(i); return i; });
+    const eqPhase = bars.map(() => rnd() * Math.PI * 2);
+
+    gsap.set(["#marq", "#cardWrap", "#eq"], { autoAlpha: 0 });
+    gsap.set(".end-type .mask > *", { yPercent: 110 });
+
+    const tl = gsap.timeline({ paused: true });
+    const SLOT = 2;                                   // beats per word
+
+    // STRETCH STACK 0 - 5s: each band rises in on a beat while its word stretches to fill it,
+    // holds for a beat, then collapses as the next band covers it
+    bands.forEach((band, i) => {
+      const t0 = b(i * SLOT);
+      const { h1, target } = fit[i];
+      tl.fromTo(band, { yPercent: i === 0 ? 0 : 100 }, { yPercent: 0, duration: i === 0 ? 0.01 : 0.38, ease: T.snap }, t0)
+        .fromTo(h1, { scaleY: 0 }, { scaleY: target, duration: 0.42, ease: T.snap }, t0 + 0.02)
+        .to(h1, { scaleY: target * 0.04, duration: 0.34, ease: T.in }, t0 + b(SLOT) - 0.12);
+      if (i < bands.length - 1) tl.set(band, { autoAlpha: 0 }, t0 + b(SLOT) + 0.4);
+    });
+    const tStack = b(WORDS.length * SLOT);            // 5.0s
+
+    // MARQUEES 4.9 - 7.6s: rows blast across in alternating directions, card punches in
+    tl.addLabel("marq", tStack - 0.1)
+      .set(bands[bands.length - 1], { autoAlpha: 0 }, "marq+=0.1")
+      .to("#marq", { autoAlpha: 1, duration: 0.01 }, "marq");
+    rows.forEach(({ row, dir, speed }, i) => {
+      const w = row.scrollWidth / 2;
+      tl.fromTo(row, { x: dir < 0 ? 0 : -w * 0.5 }, { x: (dir < 0 ? -w * 0.42 : -w * 0.08) * speed, duration: 5.2, ease: "none" }, "marq")
+        .fromTo(row, { yPercent: 160 * (i % 2 ? -1 : 1), autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.45, ease: T.snap }, "marq+=" + (i * 0.04));
+    });
+    tl.to("#cardWrap", { autoAlpha: 1, duration: 0.01 }, "marq+=0.5")
+      .fromTo("#card", { scale: 0.2, rotate: -14 }, { scale: 1, rotate: 0, duration: 0.6, ease: "back.out(1.6)" }, "marq+=0.5")
+      .fromTo("#glow", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: T.snap }, "marq+=0.5");
+
+    // beat pulses on the card (every beat from its arrival to the end)
+    for (let t = b(12); t < DURATION - 0.3; t += BEAT) {
+      tl.fromTo("#card", { scale: 1.045 }, { scale: 1, duration: 0.42, ease: "power2.out", immediateRender: false }, t);
+    }
+
+    // END 7.5 - 10s: marquees dim + sink, card lifts, wordmark + CTA, eq bars
+    tl.addLabel("end", 7.5)
+      .to("#marq", { autoAlpha: 0.14, duration: 0.6, ease: "power2.out" }, "end")
+      .to(".marquees", { yPercent: 6, duration: 2.5, ease: "none" }, "end")
+      .to("#cardWrap", { y: portrait ? "-9vh" : "-12vh", duration: 0.6, ease: T.io }, "end")
+      .to(".end-type .mask > *", { yPercent: 0, duration: 0.55, stagger: 0.12, ease: T.snap }, "end+=0.35")
+      .to("#eq", { autoAlpha: 1, duration: 0.3 }, "end+=0.5")
+      .set({}, {}, DURATION);
+
+    MDD.register({
+      duration: DURATION, fps: 30, timeline: tl,
+      onFrame(t) {
+        // equalizer: deterministic bounce locked to the beat grid
+        const beatPhase = (t % BEAT) / BEAT;
+        const kick = Math.exp(-beatPhase * 5);
+        bars.forEach((bar, i) => {
+          const h = 0.25 + 0.45 * kick * (0.6 + 0.4 * Math.sin(i * 1.7)) + 0.3 * (0.5 + 0.5 * Math.sin(t * 9 + eqPhase[i]));
+          bar.style.transform = `scaleY(${Math.min(1, h).toFixed(3)})`;
+        });
+      },
+    });
+  </script>
+</body>
+</html>

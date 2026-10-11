@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "motion-design-director",
+  "version": "1.0.0",
+  "description": "Turns product photos, logos and a plain-language style brief into an art-directed motion-graphics video (MP4): searches the motionprompts.dev library, builds the animation in HTML/GSAP/Three.js, renders frame-accurately with Playwright + FFmpeg, adds an optional original music bed, and verifies the output.",
+  "author": {
+    "name": "mickeydino-creator",
+    "url": "https://github.com/mickeydino-creator"
+  },
+  "homepage": "https://github.com/mickeydino-creator/motionskill",
+  "repository": "https://github.com/mickeydino-creator/motionskill",
+  "keywords": ["motion-design", "video", "animation", "gsap", "threejs", "playwright", "ffmpeg", "advertising", "motionprompts"],
+  "skills": ["./"]
+}
