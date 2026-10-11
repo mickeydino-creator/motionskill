@@ -27,7 +27,7 @@ On older Claude Code versions, add the marketplace first:
 /plugin install motion-design-director@motionskill
 ```
 
-To install manually as a personal skill, clone this repo and run `./install.sh`. That copies the skill to `~/.claude/skills/motion-design-director`. Use `./install.sh --link` to symlink it instead.
+To install manually as a personal skill, clone this repo and run `./install.sh`. That copies the skill to `~/.claude/skills/motion-design-director`. Use `./install.sh --link` to symlink it instead. Use only one install method: if both exist, the marketplace plugin takes precedence and the manual copy is not loaded.
 
 ### Requirements
 
