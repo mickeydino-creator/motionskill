@@ -9,6 +9,19 @@
   },
   "homepage": "https://github.com/mickeydino-creator/motionskill",
   "repository": "https://github.com/mickeydino-creator/motionskill",
-  "keywords": ["motion-design", "video", "animation", "gsap", "threejs", "playwright", "ffmpeg", "advertising", "motionprompts"],
-  "skills": ["./"]
+  "keywords": [
+    "motion-design",
+    "video",
+    "animation",
+    "gsap",
+    "threejs",
+    "playwright",
+    "ffmpeg",
+    "advertising",
+    "motionprompts"
+  ],
+  "skills": [
+    "./"
+  ],
+  "license": "SEE LICENSE IN LICENSE"
 }

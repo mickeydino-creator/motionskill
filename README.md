@@ -80,6 +80,11 @@ examples/                                real runs: source, credits, renders
 
 ## Licences and trademarks
 
+- **This skill:** [Apache 2.0 with the Commons Clause](LICENSE). In practice:
+  - You may use the skill, modify it and share it for free.
+  - You may **not sell the skill itself**: copies, modified versions or a paid hosted service.
+  - **What you create with it is yours.** You may sell the videos you make, and sell production services where the skill is just your tool.
+  - Strictly speaking, the Commons Clause makes this "source-available" rather than OSI open source.
 - **The motionprompts.dev components and prompts** are under **PolyForm Noncommercial 1.0.0** and require attribution. Commercial use needs a licence from motionprompts.dev. By default the skill uses the library only as a *mechanic reference* and writes original code. It copies or closely adapts library code only for noncommercial work, and labels it as such in `CREDITS.md`.
 - **The Spotify examples** are unofficial portfolio spec work. They are not affiliated with, sponsored by or endorsed by Spotify. Spotify and its logo are trademarks of Spotify AB, and the logo files are not included in this repository.
 - **GSAP** is free under its standard licence. **three.js** is MIT-licensed.

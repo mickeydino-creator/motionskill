@@ -10,3 +10,4 @@ First public release.
 - An original procedural music generator, with audio muxed into the render.
 - Packaged as a Claude Code plugin with a marketplace manifest.
 - Three worked examples.
+- Licensed under Apache 2.0 with the Commons Clause, plus an explicit permission that everything you create with the skill is yours.
