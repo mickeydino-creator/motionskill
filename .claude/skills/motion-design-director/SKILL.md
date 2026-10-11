@@ -81,7 +81,9 @@ attributions.
 Score the candidates (creative-direction.md §3). Pick **one signature mechanic** plus at most 2 supporting ones
 that share a motion system. Pull that system's tokens with `mp_catalog.py systems <name>`.
 Choose by yourself. Ask the user only when two directions are equally strong and fundamentally different.
-Record each component you actually use:
+Record each component you actually use, with an honest usage level. If you copied or closely
+paraphrased their code (a shader loop, a CSS block), that is `adapted-source`, not `mechanic-reference`.
+That level is only allowed for noncommercial work or with a licence:
 ```
 python3 $SKILL/scripts/mp_catalog.py credit <slug> --project <proj> --usage mechanic-reference --how "<what you took, how adapted>"
 ```
