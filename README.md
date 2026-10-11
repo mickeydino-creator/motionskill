@@ -30,7 +30,8 @@ On older Claude Code versions, add the marketplace first:
 To install manually as a personal skill, clone this repo and run `./install.sh`. That copies the skill to `~/.claude/skills/motion-design-director`. Use `./install.sh --link` to symlink it instead. Use only one install method: if both exist, the marketplace plugin takes precedence and the manual copy is not loaded.
 
 To upload it as a zipped skill (for example "Upload skill" in the Claude apps), use
-[`dist/motion-design-director.zip`](dist/motion-design-director.zip), or rebuild it with `./build-skill-zip.sh`.
+the `motion-design-director.zip` built by `./build-skill-zip.sh` (written to `dist/`, which is not committed).
+Upload that file itself. Do not zip the whole repository: it is not a skill folder, and it contains examples and videos.
 The archive holds just the skill folder, with no symlinks and no plugin manifest. Rendering to MP4 needs Node,
 Playwright/Chromium and FFmpeg in the environment where the skill runs. Claude Code has them, but a sandbox
 without them can only build the animation and stills, and the skill will say so.
