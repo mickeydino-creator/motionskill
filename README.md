@@ -37,6 +37,7 @@ Defaults: 10 s, 16:9, 1920×1080, 30 fps. Other supported ratios: 9:16, 1:1, 4:5
   scripts/inspect_assets.py        image analysis (palette, background, bbox), background cutout, resize
   scripts/new_project.sh           project scaffold with vendored gsap/three
   scripts/mdd-runtime.js           deterministic timeline contract (MDD.register / MDD.seek)
+  scripts/make_music.py            original procedural music bed on a BPM grid (drop / roll / impact)
   scripts/render_video.mjs         HTML -> MP4 renderer with ffprobe verification + QA stills/contact sheet
   assets/template/                 starter scene (plumbing only)
 ```

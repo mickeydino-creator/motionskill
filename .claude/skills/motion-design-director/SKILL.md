@@ -105,6 +105,13 @@ the motion-system tokens. Mark custom code against library-derived code with sho
 (`/* mechanic: <slug> - adapted */`). Avoid unnecessary dependencies. Use React or Remotion only if the
 user's project already requires it.
 
+Music: if the user wants sound and gave no track, generate an original synthesised bed on the same
+BPM grid, then cut the picture to its beats (drop, roll, impact). Say it's an original synth bed, and that a real
+campaign should license music. Never pull copyrighted songs.
+```
+python3 $SKILL/scripts/make_music.py --out <proj>/assets/music.wav --duration 15 --bpm 120 --drop 5 --impact 12
+```
+
 Iterate quickly with single frames before rendering the full video:
 ```
 node $SKILL/scripts/render_video.mjs --project <proj> --still 3.0 --out <proj>/out/check-3s.png   # then Read it
@@ -112,7 +119,7 @@ node $SKILL/scripts/render_video.mjs --project <proj> --still 3.0 --out <proj>/o
 
 ### 8. Render, then run QA
 ```
-node $SKILL/scripts/render_video.mjs --project <proj> --width W --height H --fps F --out <proj>/out/<name>.mp4
+node $SKILL/scripts/render_video.mjs --project <proj> --width W --height H --fps F --out <proj>/out/<name>.mp4 [--audio <proj>/assets/music.wav]
 ```
 The renderer fails loudly on JS errors, missing images, static animation, or a mismatch in codec, resolution,
 fps, frames or duration, and it writes `out/qa/` stills and a contact sheet taken from the encoded MP4. **Read the
