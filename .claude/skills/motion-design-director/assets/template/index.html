@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Motion Design Director - scene</title>
+<!--
+  STARTER SCAFFOLD. Keep the plumbing (runtime, vendor scripts, registration, layout units),
+  REPLACE the look: palette, fonts, layers and the timeline must come from the brief and the
+  selected motionprompts.dev mechanics. Do not ship this placeholder scene.
+  Fonts: prefer self-hosted files in ./assets/fonts (@font-face) so renders are deterministic;
+  Google Fonts <link> also works when the network allows it.
+-->
+<style>
+  :root {
+    /* brand tokens - fill from inspect_assets.py palette + brief */
+    --bg: #0b0b0d;
+    --fg: #f4f1ea;
+    --accent: #c9a96e;
+    --font-display: "Inter Display", "Inter", system-ui, sans-serif;
+    --font-text: "Inter", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); }
+  body { font-family: var(--font-text); -webkit-font-smoothing: antialiased; }
+  /* The stage is always exactly the viewport (= render resolution). Size everything in vmin/vw/vh
+     so 16:9, 9:16, 1:1 and 4:5 all compose correctly. Use [data-orientation] for layout changes. */
+  .stage { position: fixed; inset: 0; overflow: hidden; }
+  .layer { position: absolute; inset: 0; }
+  .bg { background: radial-gradient(120vmax 80vmax at 50% 60%, #1b1a1f 0%, var(--bg) 60%); }
+  .hero { display: grid; place-items: center; }
+  .hero img { max-width: 56vw; max-height: 62vh; object-fit: contain; will-change: transform, opacity, filter; }
+  [data-orientation="portrait"] .hero img { max-width: 78vw; max-height: 48vh; }
+  .type { display: grid; align-content: end; justify-items: center; padding-bottom: 10vh; text-align: center; }
+  .headline { font-family: var(--font-display); font-weight: 600; font-size: 6vmin; letter-spacing: -0.02em; line-height: 1; }
+  .sub { margin-top: 1.6vmin; font-size: 1.8vmin; letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent); }
+  .line { display: block; overflow: hidden; } /* mask for line reveals */
+  .line > span { display: inline-block; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="layer bg"></div>
+    <div class="layer hero"><img id="hero" src="assets/placeholder.svg" alt="" /></div>
+    <div class="layer type">
+      <h1 class="headline"><span class="line"><span>Your headline</span></span></h1>
+      <p class="sub"><span class="line"><span>Brand · tagline</span></span></p>
+    </div>
+  </div>
+
+  <script src="mdd-runtime.js"></script>
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <!-- three.js (if used): <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/jsm/"}}</script> -->
+  <script>
+    // Motion system tokens: copy from `mp_catalog.py systems <name>` for the chosen system.
+    const T = { ease: "power3.out", easeIO: "power4.inOut", exit: "power2.in", fast: 0.5, base: 1.0, slow: 1.8, stagger: 0.08 };
+    const DURATION = 10;
+
+    const tl = gsap.timeline({ paused: true, defaults: { ease: T.ease } });
+    // Scene 1 - open (0-2s)
+    tl.addLabel("open", 0)
+      .fromTo(".bg", { opacity: 0 }, { opacity: 1, duration: T.slow, ease: "none" }, "open")
+    // Scene 2 - reveal (1.2-4s)
+      .addLabel("reveal", 1.2)
+      .fromTo("#hero", { opacity: 0, scale: 0.92, y: "4vh", filter: "blur(12px)" },
+                       { opacity: 1, scale: 1, y: 0, filter: "blur(0px)", duration: T.slow }, "reveal")
+    // Scene 3 - hero hold with slow push-in (keeps the frame alive)
+      .to("#hero", { scale: 1.04, duration: 5, ease: "none" }, "reveal+=" + T.slow)
+    // Scene 4 - type (4-6s)
+      .addLabel("type", 4)
+      .fromTo(".line > span", { yPercent: 110 }, { yPercent: 0, duration: T.base, stagger: T.stagger, ease: T.easeIO }, "type")
+    // Scene 5 - end card holds until DURATION
+      .set({}, {}, DURATION);
+
+    MDD.register({ duration: DURATION, fps: 30, timeline: tl });
+  </script>
+</body>
+</html>
